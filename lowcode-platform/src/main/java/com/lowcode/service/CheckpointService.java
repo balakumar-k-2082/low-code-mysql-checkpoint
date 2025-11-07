@@ -4,6 +4,8 @@ import com.checkpoint.manager.CheckpointManager;
 import com.checkpoint.manager.UndoRedoManager;
 import com.checkpoint.model.Checkpoint;
 import com.lowcode.dto.CheckpointActivityDTO;
+import com.lowcode.model.App;
+import com.lowcode.repository.AppRepository;
 import com.mysql.cj.jdbc.MysqlDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 @Slf4j
 public class CheckpointService {
+
+    private final AppRepository appRepository;
 
     @Value("${checkpoint.mysql.host}")
     private String mysqlHost;
@@ -52,6 +56,10 @@ public class CheckpointService {
 
     // Map of appId -> UndoRedoManager
     private final Map<String, UndoRedoManager> undoRedoManagers = new ConcurrentHashMap<>();
+
+    public CheckpointService(AppRepository appRepository) {
+        this.appRepository = appRepository;
+    }
 
     @PostConstruct
     public void init() {
@@ -120,9 +128,27 @@ public class CheckpointService {
     }
 
     /**
+     * Ensure checkpoint system is initialized for an app (lazy initialization)
+     */
+    private void ensureInitialized(String appId) throws SQLException {
+        if (!checkpointManagers.containsKey(appId)) {
+            log.info("Checkpoint system not initialized for app {}, initializing now...", appId);
+
+            // Look up app to get schema name
+            App app = appRepository.findById(appId)
+                .orElseThrow(() -> new IllegalStateException("App not found: " + appId));
+
+            initializeCheckpointForApp(appId, app.getSchemaName());
+        }
+    }
+
+    /**
      * Perform undo operation
      */
     public void undo(String appId, String userId) throws SQLException {
+        // Ensure checkpoint system is initialized (lazy init)
+        ensureInitialized(appId);
+
         UndoRedoManager manager = undoRedoManagers.get(appId);
         if (manager == null) {
             throw new IllegalStateException("Checkpoint system not initialized for app: " + appId);
@@ -136,6 +162,9 @@ public class CheckpointService {
      * Perform redo operation
      */
     public void redo(String appId, String userId) throws SQLException {
+        // Ensure checkpoint system is initialized (lazy init)
+        ensureInitialized(appId);
+
         UndoRedoManager manager = undoRedoManagers.get(appId);
         if (manager == null) {
             throw new IllegalStateException("Checkpoint system not initialized for app: " + appId);
@@ -149,6 +178,9 @@ public class CheckpointService {
      * Get checkpoint activities for display in UI
      */
     public List<CheckpointActivityDTO> getActivities(String appId, String userId) throws SQLException {
+        // Ensure checkpoint system is initialized (lazy init)
+        ensureInitialized(appId);
+
         CheckpointManager manager = checkpointManagers.get(appId);
         if (manager == null) {
             return new ArrayList<>();
@@ -193,6 +225,9 @@ public class CheckpointService {
      * Revert to a specific checkpoint
      */
     public void revertToCheckpoint(String appId, String userId, Long checkpointId) throws SQLException {
+        // Ensure checkpoint system is initialized (lazy init)
+        ensureInitialized(appId);
+
         UndoRedoManager manager = undoRedoManagers.get(appId);
         CheckpointManager checkpointManager = checkpointManagers.get(appId);
 
