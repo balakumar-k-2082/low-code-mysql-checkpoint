@@ -377,6 +377,56 @@ public class CheckpointManager {
     }
 
     /**
+     * Get checkpoint history for a user (most recent first)
+     */
+    public List<Checkpoint> getCheckpointHistory(String userId, int limit) throws SQLException {
+        List<Checkpoint> checkpoints = new ArrayList<>();
+
+        String sql = "SELECT * FROM checkpoint_system.checkpoints " +
+                    "WHERE app_id = ? AND user_id = ? " +
+                    "ORDER BY created_at DESC LIMIT ?";
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, appId);
+            stmt.setString(2, userId);
+            stmt.setInt(3, limit);
+
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                checkpoints.add(mapCheckpoint(rs));
+            }
+            rs.close();
+        }
+
+        return checkpoints;
+    }
+
+    /**
+     * Get checkpoint by ID
+     */
+    public Checkpoint getCheckpointById(Long checkpointId) throws SQLException {
+        String sql = "SELECT * FROM checkpoint_system.checkpoints WHERE id = ?";
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, checkpointId);
+
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                Checkpoint checkpoint = mapCheckpoint(rs);
+                rs.close();
+                return checkpoint;
+            }
+            rs.close();
+        }
+
+        throw new SQLException("Checkpoint not found: " + checkpointId);
+    }
+
+    /**
      * Map ResultSet to Checkpoint object
      */
     private Checkpoint mapCheckpoint(ResultSet rs) throws SQLException {
