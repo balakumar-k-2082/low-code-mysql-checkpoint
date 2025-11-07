@@ -168,7 +168,7 @@ public class CheckpointService {
             activity.setName(checkpoint.getName());
             activity.setGtid(checkpoint.getGtid());
             activity.setCreatedAt(checkpoint.getCreatedAt().toLocalDateTime());
-            activity.setIsCurrent(checkpoint.getId().equals(currentId));
+            activity.setIsCurrent(checkpoint.getId() == currentId);
 
             // Load transaction events for this checkpoint
             var events = manager.loadTransactionEvents(checkpoint.getId());
@@ -214,7 +214,7 @@ public class CheckpointService {
         // For now, implement simple undo-until-target logic
         while (true) {
             Checkpoint currentPos = checkpointManager.getCurrentCheckpoint(userId);
-            if (currentPos.getId().equals(checkpointId)) {
+            if (currentPos.getId() == checkpointId) {
                 break;
             }
 
