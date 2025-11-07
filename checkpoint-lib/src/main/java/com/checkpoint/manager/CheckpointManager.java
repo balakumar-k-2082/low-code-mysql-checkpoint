@@ -25,6 +25,7 @@ public class CheckpointManager {
     private final String appId;
     private final String schemaName;
     private final TransactionCapture transactionCapture;
+    private String activeUserId = "system";  // Default user for checkpoints
 
     public CheckpointManager(DataSource dataSource, String appId, String schemaName,
                             String binlogHost, int binlogPort, String binlogUser, String binlogPassword)
@@ -42,6 +43,14 @@ public class CheckpointManager {
 
         // Set callback for when transactions complete
         transactionCapture.setOnTransactionComplete(this::onTransactionComplete);
+    }
+
+    /**
+     * Set the active user for checkpoint creation
+     */
+    public void setActiveUser(String userId) {
+        this.activeUserId = userId;
+        logger.debug("Active user set to: {}", userId);
     }
 
     /**
@@ -126,7 +135,7 @@ public class CheckpointManager {
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setString(1, appId);
-            stmt.setString(2, "system");  // Default user
+            stmt.setString(2, activeUserId);  // Use active user
             stmt.setString(3, name);
             stmt.setString(4, transaction.getGtid());
             stmt.setLong(5, transaction.getXid());
@@ -136,7 +145,7 @@ public class CheckpointManager {
             stmt.setLong(9, transaction.getEndPosition());
 
             // Get previous checkpoint ID
-            Long previousId = getPreviousCheckpointId(appId, "system");
+            Long previousId = getPreviousCheckpointId(appId, activeUserId);
             if (previousId != null) {
                 stmt.setLong(10, previousId);
             } else {
@@ -155,7 +164,7 @@ public class CheckpointManager {
         storeTransactionEvents(checkpointId, transaction.getEvents());
 
         // Update user position
-        updateUserPosition(appId, "system", checkpointId);
+        updateUserPosition(appId, activeUserId, checkpointId);
 
         logger.info("Created checkpoint: id={}, gtid={}, events={}",
                    checkpointId, transaction.getGtid(), transaction.getEventCount());

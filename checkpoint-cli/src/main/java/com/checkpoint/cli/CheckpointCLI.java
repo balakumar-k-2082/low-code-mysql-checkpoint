@@ -76,6 +76,10 @@ public class CheckpointCLI {
 
             checkpointManager.initialize();
 
+            // Set active user for checkpoint tracking
+            String userId = "demo_user";
+            checkpointManager.setActiveUser(userId);
+
             // Initialize undo/redo manager
             UndoRedoManager undoRedoManager = new UndoRedoManager(
                 dataSource,
@@ -87,7 +91,7 @@ public class CheckpointCLI {
             System.out.println("✅ Checkpoint system initialized!\n");
 
             // Run interactive demo
-            runInteractiveDemo(scanner, dataSource, checkpointManager, undoRedoManager);
+            runInteractiveDemo(scanner, dataSource, checkpointManager, undoRedoManager, userId);
 
             // Cleanup
             checkpointManager.stop();
@@ -141,9 +145,8 @@ public class CheckpointCLI {
      */
     private static void runInteractiveDemo(Scanner scanner, MysqlDataSource dataSource,
                                            CheckpointManager checkpointManager,
-                                           UndoRedoManager undoRedoManager) {
-
-        String userId = "demo_user";
+                                           UndoRedoManager undoRedoManager,
+                                           String userId) {
 
         System.out.println("╔═══════════════════════════════════════════════════════════╗");
         System.out.println("║                    DEMO SCENARIO                          ║");
@@ -342,7 +345,7 @@ public class CheckpointCLI {
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
 
-            stmt.executeQuery("USE app_demo");
+            stmt.execute("USE app_demo");
             var rs = stmt.executeQuery(
                 "SELECT field_name, field_type, is_required FROM form_fields"
             );
