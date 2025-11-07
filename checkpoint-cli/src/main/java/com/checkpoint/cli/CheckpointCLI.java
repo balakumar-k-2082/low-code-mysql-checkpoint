@@ -46,9 +46,9 @@ public class CheckpointCLI {
             String user = scanner.nextLine().trim();
             if (user.isEmpty()) user = DEFAULT_USER;
 
-            System.out.print("MySQL Password: ");
+            System.out.print("MySQL Password (leave empty for no password): ");
             String password = scanner.nextLine().trim();
-            if (password.isEmpty()) password = DEFAULT_PASSWORD;
+            // Allow empty password - don't fall back to default
 
             System.out.println("\n Connecting to MySQL...");
 
