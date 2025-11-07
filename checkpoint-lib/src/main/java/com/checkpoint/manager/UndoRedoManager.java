@@ -99,12 +99,14 @@ public class UndoRedoManager {
      */
     private void executeUndoTransaction(List<TransactionEvent> events) throws SQLException {
         Connection conn = dataSource.getConnection();
-        conn.setAutoCommit(false);
 
         try {
-            // Disable foreign key checks and binlog
-            executeUpdate(conn, "SET FOREIGN_KEY_CHECKS = 0");
+            // MUST set sql_log_bin BEFORE starting transaction
             executeUpdate(conn, "SET SESSION sql_log_bin = 0");
+            executeUpdate(conn, "SET FOREIGN_KEY_CHECKS = 0");
+
+            // NOW start the transaction
+            conn.setAutoCommit(false);
 
             // Process events in REVERSE order
             for (int i = events.size() - 1; i >= 0; i--) {
@@ -117,10 +119,6 @@ public class UndoRedoManager {
                 executeUpdateWithEvent(conn, sql, event);
             }
 
-            // Re-enable
-            executeUpdate(conn, "SET FOREIGN_KEY_CHECKS = 1");
-            executeUpdate(conn, "SET SESSION sql_log_bin = 1");
-
             conn.commit();
 
             logger.debug("Undo transaction committed successfully");
@@ -131,6 +129,13 @@ public class UndoRedoManager {
             throw new SQLException("Undo failed: " + e.getMessage(), e);
 
         } finally {
+            // Re-enable settings
+            try {
+                executeUpdate(conn, "SET FOREIGN_KEY_CHECKS = 1");
+                executeUpdate(conn, "SET SESSION sql_log_bin = 1");
+            } catch (Exception e) {
+                logger.warn("Failed to reset session variables", e);
+            }
             conn.setAutoCommit(true);
             conn.close();
         }
@@ -141,12 +146,14 @@ public class UndoRedoManager {
      */
     private void executeRedoTransaction(List<TransactionEvent> events) throws SQLException {
         Connection conn = dataSource.getConnection();
-        conn.setAutoCommit(false);
 
         try {
-            // Disable foreign key checks and binlog
-            executeUpdate(conn, "SET FOREIGN_KEY_CHECKS = 0");
+            // MUST set sql_log_bin BEFORE starting transaction
             executeUpdate(conn, "SET SESSION sql_log_bin = 0");
+            executeUpdate(conn, "SET FOREIGN_KEY_CHECKS = 0");
+
+            // NOW start the transaction
+            conn.setAutoCommit(false);
 
             // Process events in FORWARD order
             for (int i = 0; i < events.size(); i++) {
@@ -159,10 +166,6 @@ public class UndoRedoManager {
                 executeUpdateWithEvent(conn, sql, event);
             }
 
-            // Re-enable
-            executeUpdate(conn, "SET FOREIGN_KEY_CHECKS = 1");
-            executeUpdate(conn, "SET SESSION sql_log_bin = 1");
-
             conn.commit();
 
             logger.debug("Redo transaction committed successfully");
@@ -173,6 +176,13 @@ public class UndoRedoManager {
             throw new SQLException("Redo failed: " + e.getMessage(), e);
 
         } finally {
+            // Re-enable settings
+            try {
+                executeUpdate(conn, "SET FOREIGN_KEY_CHECKS = 1");
+                executeUpdate(conn, "SET SESSION sql_log_bin = 1");
+            } catch (Exception e) {
+                logger.warn("Failed to reset session variables", e);
+            }
             conn.setAutoCommit(true);
             conn.close();
         }
