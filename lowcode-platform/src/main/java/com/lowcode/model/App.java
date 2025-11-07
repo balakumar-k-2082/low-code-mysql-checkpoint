@@ -26,8 +26,8 @@ public class App {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "schema_name", nullable = false, unique = true, length = 64)
-    private String schemaName;  // app_{app_id}
+    @Column(name = "schema_name", unique = true, length = 64)
+    private String schemaName;  // app_{app_id} - generated after save
 
     private String icon;
 
@@ -44,10 +44,7 @@ public class App {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (schemaName == null && id != null) {
-            // Generate schema name from id
-            schemaName = "app_" + id.replace("-", "_");
-        }
+        // Schema name is now set in AppService after ID is generated
     }
 
     @PreUpdate

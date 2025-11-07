@@ -49,8 +49,15 @@ public class AppService {
     public App createApp(App app) {
         log.info("Creating app: {}", app.getName());
 
-        // Save app metadata
+        // Save app metadata first to get generated ID
         App savedApp = appRepository.save(app);
+
+        // Generate schema name from ID (after ID is generated)
+        String schemaName = "app_" + savedApp.getId().replace("-", "_");
+        savedApp.setSchemaName(schemaName);
+
+        // Save again with schema name
+        savedApp = appRepository.save(savedApp);
 
         // Create app database
         databaseService.createAppDatabase(savedApp.getSchemaName());
