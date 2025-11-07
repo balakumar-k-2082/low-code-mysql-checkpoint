@@ -116,7 +116,7 @@ public class UndoRedoManager {
                 logger.debug("Undo event {}: {} {}.{}",
                            i, event.getEventType(), event.getSchemaName(), event.getTableName());
 
-                executeUpdateWithEvent(conn, sql, event);
+                executeUpdateWithEvent(conn, sql, event, true);
             }
 
             conn.commit();
@@ -163,7 +163,7 @@ public class UndoRedoManager {
                 logger.debug("Redo event {}: {} {}.{}",
                            i, event.getEventType(), event.getSchemaName(), event.getTableName());
 
-                executeUpdateWithEvent(conn, sql, event);
+                executeUpdateWithEvent(conn, sql, event, false);
             }
 
             conn.commit();
@@ -238,25 +238,34 @@ public class UndoRedoManager {
 
     /**
      * Execute update with event data
+     * @param isUndo true for undo operations, false for redo operations
      */
-    private void executeUpdateWithEvent(Connection conn, String sqlTemplate, TransactionEvent event)
+    private void executeUpdateWithEvent(Connection conn, String sqlTemplate, TransactionEvent event, boolean isUndo)
             throws SQLException {
 
         String sql;
 
         switch (event.getEventType()) {
             case "INSERT":
-                // For undo: DELETE using AFTER image
                 Map<String, Object> afterData = RowSerializer.deserializeRow(event.getAfterImage());
-                sql = buildDeleteSql(sqlTemplate, afterData);
+                if (sqlTemplate.startsWith("INSERT")) {
+                    // For redo: INSERT using AFTER image
+                    sql = buildInsertSql(sqlTemplate, afterData);
+                } else {
+                    // For undo: DELETE using AFTER image
+                    sql = buildDeleteSql(sqlTemplate, afterData);
+                }
                 break;
 
             case "UPDATE":
-                // For undo: UPDATE using BEFORE image
-                // For redo: UPDATE using AFTER image
-                Map<String, Object> updateData = RowSerializer.deserializeRow(
-                    sqlTemplate.contains("SET") ? event.getBeforeImage() : event.getAfterImage()
-                );
+                // For undo UPDATE: use BEFORE image (restore old state)
+                // For redo UPDATE: use AFTER image (apply new state)
+                Map<String, Object> updateData;
+                if (isUndo) {
+                    updateData = RowSerializer.deserializeRow(event.getBeforeImage());
+                } else {
+                    updateData = RowSerializer.deserializeRow(event.getAfterImage());
+                }
                 sql = buildUpdateSql(sqlTemplate, updateData);
                 break;
 
