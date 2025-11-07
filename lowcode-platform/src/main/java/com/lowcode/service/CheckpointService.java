@@ -167,7 +167,7 @@ public class CheckpointService {
             activity.setId(checkpoint.getId());
             activity.setName(checkpoint.getName());
             activity.setGtid(checkpoint.getGtid());
-            activity.setCreatedAt(checkpoint.getCreatedAt());
+            activity.setCreatedAt(checkpoint.getCreatedAt().toLocalDateTime());
             activity.setIsCurrent(checkpoint.getId().equals(currentId));
 
             // Load transaction events for this checkpoint
