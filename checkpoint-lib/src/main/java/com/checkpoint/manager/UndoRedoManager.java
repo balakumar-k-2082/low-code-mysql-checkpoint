@@ -245,15 +245,22 @@ public class UndoRedoManager {
 
         String sql;
 
+        logger.debug("executeUpdateWithEvent: eventType={}, isUndo={}, template={}",
+                    event.getEventType(), isUndo, sqlTemplate);
+
         switch (event.getEventType()) {
             case "INSERT":
                 Map<String, Object> afterData = RowSerializer.deserializeRow(event.getAfterImage());
+                logger.debug("INSERT case: afterData size={}, startsWith INSERT={}",
+                           afterData != null ? afterData.size() : 0, sqlTemplate.startsWith("INSERT"));
                 if (sqlTemplate.startsWith("INSERT")) {
                     // For redo: INSERT using AFTER image
                     sql = buildInsertSql(sqlTemplate, afterData);
+                    logger.debug("Built INSERT SQL: {}", sql);
                 } else {
                     // For undo: DELETE using AFTER image
                     sql = buildDeleteSql(sqlTemplate, afterData);
+                    logger.debug("Built DELETE SQL: {}", sql);
                 }
                 break;
 
