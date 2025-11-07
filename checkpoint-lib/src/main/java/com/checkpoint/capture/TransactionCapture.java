@@ -86,11 +86,11 @@ public class TransactionCapture {
                 // Handle different event types
                 switch (eventType) {
                     case GTID:
-                        handleGtidEvent((GtidEventData) data, header);
+                        handleGtidEvent((GtidEventData) data);
                         break;
 
                     case QUERY:
-                        handleQueryEvent((QueryEventData) data, header);
+                        handleQueryEvent((QueryEventData) data);
                         break;
 
                     case TABLE_MAP:
@@ -113,7 +113,7 @@ public class TransactionCapture {
                         break;
 
                     case XID:
-                        handleXidEvent((XidEventData) data, header);
+                        handleXidEvent((XidEventData) data);
                         break;
 
                     default:
@@ -130,13 +130,13 @@ public class TransactionCapture {
     /**
      * Handle GTID event - marks start of transaction
      */
-    private void handleGtidEvent(GtidEventData data, EventHeader header) {
-        currentGtid = data.getGtid();
+    private void handleGtidEvent(GtidEventData data) {
+        currentGtid = data.getGtid(); // deprecated, but still used for compatibility
 
         // Start new transaction
         currentTransaction = new Transaction();
         currentTransaction.setGtid(currentGtid);
-        currentTransaction.setStartPosition(header.getNextPosition());
+        currentTransaction.setStartPosition(client.getBinlogPosition());
         currentTransaction.setBinlogFilename(currentBinlogFilename);
 
         logger.debug("Transaction started: GTID={}", currentGtid);
@@ -145,14 +145,14 @@ public class TransactionCapture {
     /**
      * Handle QUERY event - can be BEGIN, COMMIT, ROLLBACK, or DDL
      */
-    private void handleQueryEvent(QueryEventData data, EventHeader header) {
+    private void handleQueryEvent(QueryEventData data) {
         String sql = data.getSql().trim().toUpperCase();
 
         if (sql.equals("BEGIN")) {
             // Transaction started (if no GTID, this marks start)
             if (currentTransaction == null) {
                 currentTransaction = new Transaction();
-                currentTransaction.setStartPosition(header.getPosition());
+                currentTransaction.setStartPosition(client.getBinlogPosition());
                 currentTransaction.setBinlogFilename(currentBinlogFilename);
             }
             logger.debug("Transaction BEGIN");
@@ -161,7 +161,7 @@ public class TransactionCapture {
             // Transaction committed (for non-XA transactions)
             if (currentTransaction != null) {
                 currentTransaction.setCommitted(true);
-                currentTransaction.setEndPosition(header.getNextPosition());
+                currentTransaction.setEndPosition(client.getBinlogPosition());
                 completeTransaction();
             }
             logger.debug("Transaction COMMIT");
@@ -182,8 +182,8 @@ public class TransactionCapture {
             Transaction ddlTransaction = new Transaction();
             ddlTransaction.setDdl(true);
             ddlTransaction.setDdlSql(sql);
-            ddlTransaction.setStartPosition(header.getPosition());
-            ddlTransaction.setEndPosition(header.getNextPosition());
+            ddlTransaction.setStartPosition(client.getBinlogPosition());
+            ddlTransaction.setEndPosition(client.getBinlogPosition());
             ddlTransaction.setBinlogFilename(currentBinlogFilename);
             ddlTransaction.setCommitted(true);
 
@@ -318,10 +318,10 @@ public class TransactionCapture {
     /**
      * Handle XID event - marks end of XA transaction (most common)
      */
-    private void handleXidEvent(XidEventData data, EventHeader header) {
+    private void handleXidEvent(XidEventData data) {
         if (currentTransaction != null) {
             currentTransaction.setXid(data.getXid());
-            currentTransaction.setEndPosition(header.getNextPosition());
+            currentTransaction.setEndPosition(client.getBinlogPosition());
             currentTransaction.setCommitted(true);
 
             completeTransaction();
