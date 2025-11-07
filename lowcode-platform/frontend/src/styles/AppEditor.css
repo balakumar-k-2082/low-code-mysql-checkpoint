@@ -41,7 +41,7 @@
 }
 
 .btn-primary {
-  background: #667eea;
+  background: #3b82f6;
   color: white;
   border: none;
   padding: 10px 20px;
@@ -50,11 +50,17 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 14px;
+  transition: background 0.2s ease;
 }
 
 .btn-primary:hover {
-  background: #5568d3;
+  background: #2563eb;
+}
+
+.btn-primary:active {
+  background: #1d4ed8;
 }
 
 .btn-secondary {
@@ -112,8 +118,8 @@
 }
 
 .form-item.active {
-  background: #e8eaf6;
-  color: #667eea;
+  background: #eff6ff;
+  color: #3b82f6;
   font-weight: 600;
 }
 
@@ -150,8 +156,8 @@
 }
 
 .field-type {
-  background: #e8eaf6;
-  color: #667eea;
+  background: #eff6ff;
+  color: #3b82f6;
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 12px;
@@ -284,8 +290,8 @@
 }
 
 .activity-item.current {
-  border-color: #667eea;
-  background: #e8eaf6;
+  border-color: #3b82f6;
+  background: #eff6ff;
 }
 
 .activity-item strong {
